@@ -12,7 +12,7 @@ color leds[KEY_COUNT];
 
 void showRGB(void) {
     for(int i = 0; i < KEY_COUNT; i++) {
-        rgb_matrix_set_color(i, leds[i].red, leds[i].blue, leds[i].green);
+        rgb_matrix_set_color(i, leds[i].red, leds[i].green, leds[i].blue);
     }
 }
 

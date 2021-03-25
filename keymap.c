@@ -3,6 +3,79 @@
 
 #define KEY_COUNT 61
 
+/* FIRST ROW */
+#define ESC_LED 0
+#define N1_LED 1
+#define N2_LED 2
+#define N3_LED 3
+#define N4_LED 4
+#define N5_LED 5
+#define N6_LED 6
+#define N7_LED 7
+#define N8_LED 8
+#define N9_LED 9
+#define N10_LED 10
+#define N11_LED 11
+#define N12_LED 12
+#define BACKSPACE_LED 13
+
+/* SECOND ROW */
+#define TAB_LED 14
+#define Q_LED 15
+#define W_LED 16
+#define E_LED 17
+#define R_LED 18
+#define T_LED 19
+#define Y_LED 20
+#define U_LED 21
+#define I_LED 22
+#define O_LED 23
+#define P_LED 24
+#define OPENING_SQUARE_BRACKET_LED 25
+#define CLOSING_SQUARE_BRACKET_LED 26
+#define BACKSLASH_LED 27
+
+/* THIRD ROW */
+#define CAPS_LED 28
+#define A_LED 29
+#define S_LED 30
+#define D_LED 31
+#define F_LED 32
+#define G_LED 33
+#define H_LED 34
+#define J_LED 35
+#define K_LED 36
+#define L_LED 37
+#define SEMICOLON_LED 38
+#define QUOTE_LED 39
+#define RETURN_LED 40
+
+/* FOURTH ROW */
+#define SHIFT_LED 41
+#define Z_LED 42
+#define X_LED 43
+#define C_LED 44
+#define V_LED 45
+#define B_LED 46
+#define N_LED 47
+#define M_LED 48
+#define COMMA__LED 49
+#define DOT_LED 50
+#define SLASH_LED 51
+#define RSHIFT_LED 52
+
+/* FIFTH ROW */
+#define CTRL_LED 53
+#define OS_LED 54
+#define ALT_LED 55
+#define SPACE_LED 56
+#define FN_LED 57
+#define RWIN_LED 58
+#define RALT_LED 59
+#define RCTRL_LED 60
+
+#define LIGHT_LAYER_KEY(k, r, g, b) if(i == k) { rgb_matrix_set_color(k, r, g, b); continue; }
+
 typedef struct {
   uint8_t red;
   uint8_t blue;
@@ -10,10 +83,69 @@ typedef struct {
 } color;
 color leds[KEY_COUNT];
 
+bool modifierPressed = false;
+
 void showRGB(void) {
     for(int i = 0; i < KEY_COUNT; i++) {
-        rgb_matrix_set_color(i, leds[i].red, leds[i].green, leds[i].blue);
+        /*
+         * For performance reasons (because this function is called every matrix scan)
+         * I'm not iterating over an array which includes all layer 2 keys and what color
+         * they should light up. Instead I'm writing all these if statements. I know it's ugly
+         */
+        if(modifierPressed) {
+            /* FIRST ROW */
+            LIGHT_LAYER_KEY(ESC_LED, 255, 0, 0);
+            LIGHT_LAYER_KEY(N1_LED, 255, 0, 0);
+            LIGHT_LAYER_KEY(N2_LED, 255, 0, 0);
+            LIGHT_LAYER_KEY(N3_LED, 255, 0, 0);
+            LIGHT_LAYER_KEY(N4_LED, 255, 0, 0);
+            LIGHT_LAYER_KEY(N5_LED, 255, 0, 0);
+            LIGHT_LAYER_KEY(N6_LED, 255, 0, 0);
+            LIGHT_LAYER_KEY(N7_LED, 255, 0, 0);
+            LIGHT_LAYER_KEY(N8_LED, 255, 0, 0);
+            LIGHT_LAYER_KEY(N9_LED, 255, 0, 0);
+            LIGHT_LAYER_KEY(N10_LED, 255, 0, 0);
+            LIGHT_LAYER_KEY(N11_LED, 255, 0, 0);
+            LIGHT_LAYER_KEY(N12_LED, 255, 0, 0);
+            LIGHT_LAYER_KEY(BACKSPACE_LED, 255, 0, 0);
+
+            /* SECOND ROW */
+            LIGHT_LAYER_KEY(CAPS_LED, 255, 0, 0);
+            LIGHT_LAYER_KEY(OPENING_SQUARE_BRACKET_LED, 255, 0, 0);
+            LIGHT_LAYER_KEY(BACKSLASH_LED, 255, 0, 0);
+
+            /* THIRD ROW */
+            LIGHT_LAYER_KEY(A_LED, 255, 0, 0);
+            LIGHT_LAYER_KEY(S_LED, 255, 0, 0);
+            LIGHT_LAYER_KEY(D_LED, 255, 0, 0);
+            LIGHT_LAYER_KEY(SEMICOLON_LED, 255, 0, 0);
+            LIGHT_LAYER_KEY(QUOTE_LED, 255, 0, 0);
+
+            /* FOURTH ROW */
+            LIGHT_LAYER_KEY(B_LED, 255, 0, 0);
+            LIGHT_LAYER_KEY(N_LED, 255, 0, 0);
+            LIGHT_LAYER_KEY(M_LED, 255, 0, 0);
+            LIGHT_LAYER_KEY(SLASH_LED, 255, 0, 0);
+        } else {
+            rgb_matrix_set_color(i, leds[i].red, leds[i].green, leds[i].blue);
+        }
     }
+}
+
+bool process_record_user(uint16_t keycode, keyrecord_t *record) {
+    switch(keycode) {
+        case MO(1):
+            if(record->event.pressed) {
+                modifierPressed = true;
+            } else {
+                modifierPressed = false;
+            }
+            return true;
+            break;
+        default:
+            return true;
+    }
+    return true;
 }
 
 const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
@@ -37,15 +169,34 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 // Data:
 // e r g b
 /*
- * [0] r - red
- * [1] g - green
- * [2] b - blue
+ * [0] mode
  */
 void raw_hid_receive(uint8_t *data, uint8_t length) {
-    for(int i = 0; i<KEY_COUNT; i++) {
-      leds[i].red = data[0];
-      leds[i].green = data[1];
-      leds[i].blue = data[2];
+    if(data[0] == 0) { // Set all LEDs
+        /*
+         * [0] mode = 0
+         * [1] red
+         * [2] green
+         * [3] blue
+         */
+        for(int i = 0; i<KEY_COUNT; i++) {
+            leds[i].red = data[1];
+            leds[i].green = data[2];
+            leds[i].blue = data[3];
+        }
+    } else if(data[0] == 1) { // Set single LED
+        /*
+         * [0] mode = 1
+         * [1] index
+         * [2] red
+         * [3] green
+         * [4] blue
+         */
+        if(data[1] < KEY_COUNT) {
+            leds[data[1]].red = data[2];
+            leds[data[1]].green = data[3];
+            leds[data[1]].blue = data[4];
+        }
     }
 }
 
